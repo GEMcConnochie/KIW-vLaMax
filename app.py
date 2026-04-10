@@ -1,12 +1,11 @@
+
 import os
 import datetime
-import numpy as np
-import pandas as pd
 import streamlit as st
 
 # ─── Page Configuration ────────────────────────────────────────────
 st.set_page_config(
-    page_title="VO2 Max Calculator",
+    page_title="vLaMax Calculator",
     layout="wide",
     initial_sidebar_state="auto",
 )
@@ -25,6 +24,7 @@ except Exception:
         pass
     SHARED_PASSWORD = os.getenv("SHARED_PASSWORD", "")
 
+
 # ─── Session State Initialization ──────────────────────────────────
 if "language" not in st.session_state:
     st.session_state.language = "English"
@@ -32,16 +32,14 @@ if "language" not in st.session_state:
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-if "power_input" not in st.session_state:
-    st.session_state.power_input = 5.0
-
-if "calculated_vo2max" not in st.session_state:
-    st.session_state.calculated_vo2max = None
-
 if "page_internal" not in st.session_state:
     st.session_state.page_internal = "Calculator"
 
+if "calculated_vlamax" not in st.session_state:
+    st.session_state.calculated_vlamax = None
+
 language = st.session_state.language
+
 
 # ─── Language Dictionaries ────────────────────────────────────────
 page_labels = {
@@ -50,93 +48,114 @@ page_labels = {
 }
 
 
+def format_vlamax(value: float) -> str:
+    return f"{value:.2f} mmol·L⁻¹·s⁻¹"
+
+
 # ─── Instructions Page ─────────────────────────────────────────────
 def instruct_pg():
     if language == "English":
         with st.expander("**About This Calculator**", expanded=True):
-            st.markdown("""
-            This calculator estimates your **VO2max** (maximum oxygen consumption) using the **Sitko et al. (2022)** equation:
+            st.markdown(
+                """
+                This app estimates **vLaMax** — the maximum rate of blood lactate accumulation — using a simple pre/post lactate approach.
 
-            ```
-            VO2max (ml/min/kg) = 16.61 + 8.87 × 5-minute power output (W/kg)
-            ```
+                **Formula:**
+                ```
+                vLaMax = (BLamaxpost - BLapre) / (ttest - talac)
+                ```
 
-            This equation was validated in a study of **46 road cyclists** (11 professionals) with VO2max ranging from ~45 to ~80 ml/min/kg.
-
-            **Accuracy:** The equation can estimate VO2max within a **±3% error 95% of the time**.
-
-            For example, if your 5-minute power is 6.8 W/kg:
-            - VO2max = 16.61 + (8.87 × 6.8) = **76.9 ml/min/kg**
-            - 95% Confidence Interval: **74.6 – 79.2 ml/min/kg**
-            """)
+                where:
+                - **BLamaxpost** = highest blood lactate concentration after the test
+                - **BLapre** = blood lactate concentration before the test
+                - **ttest** = total test duration
+                - **talac** = alactic time span
+                """
+            )
 
         with st.expander("**How to Perform Your Test**"):
-            st.markdown("""
-            ### 5-Minute All-Out Power Test
+            st.markdown(
+                """
+                After a sufficient warm-up, perform an **8–12 second all-out sprint** under standardized conditions.
 
-            **Requirements:**
-            - Calibrated power meter
-            - Stationary bike or indoor trainer
-            - 72 hours recovery from previous intense training
+                Collect blood lactate before the effort and then sample repeatedly after the test to identify the **highest post-test lactate value**.
+                """
+            )
 
-            **Protocol:**
-            After a sufficient warm-up, perform a **5-minute all-out effort** and record the **average power (Watts)** for the full 5 minutes.
+        with st.expander("**10 Practical Recommendations**"):
+            st.markdown(
+                """
+                1. Use an **8–12 s** all-out test.
+                2. Keep the **alactic time** fixed at **3 s** when possible.
+                3. Prefer a **laboratory-grade lactate analyser**.
+                4. Aim for **pre-test lactate ≤ 1.5 mmol/L**.
+                5. Sample lactate every minute after the test and capture the peak.
+                6. Use a **fixed cadence / isokinetic mode** when testing on an ergometer.
+                7. Use **passive recovery** after the sprint.
+                8. Include at least one **familiarization** trial.
+                9. Ensure a **true maximal effort** with strong motivation.
+                10. Standardize **nutrition and hydration** before testing.
+                """
+            )
 
-
-            """)
-
-        with st.expander("**References**"):
-            st.markdown("""
-            **Primary Reference:**
-
-            Sitko, S., Cirer-Sastre, R., Corbi, F., & López-Laval, I. (2022). 
-            Five-Minute Power-Based Test to Predict Maximal Oxygen Consumption in Road Cycling. 
-            *International Journal of Sports Physiology and Performance*, 17(1), 9–15.
-            https://doi.org/10.1123/ijspp.2020-0923
-            """)
-
-    else:  # Italiano
+        with st.expander("**Reference**"):
+            st.markdown(
+                """
+                Langley, J., Haase, R., Nitzsche, N., & Porter, M. (2025). *Methodological Approaches in Testing Maximal Lactate Accumulation Rate - νLamax: A Systematic Review*. Journal of Science and Cycling, 14(1), 9.
+                https://doi.org/10.28985/1425.jsc.09
+                """
+            )
+    else:
         with st.expander("**Informazioni sul Calcolatore**", expanded=True):
-            st.markdown("""
-            Questo calcolatore stima il tuo **VO2max** (consumo massimo di ossigeno) utilizzando l'equazione **Sitko et al. (2022)**:
+            st.markdown(
+                """
+                Questa app stima la **vLaMax** — la massima velocità di accumulo del lattato nel sangue — usando un approccio semplice pre/post-test.
 
-            ```
-            VO2max (ml/min/kg) = 16.61 + 8.87 × potenza 5 minuti (W/kg)
-            ```
+                **Formula:**
+                ```
+                vLaMax = (BLamaxpost - BLapre) / (ttest - talac)
+                ```
 
-            Questa equazione è stata validata su uno studio di **46 ciclisti su strada** (11 professionisti) con VO2max compresi tra ~45 e ~80 ml/min/kg.
-
-            **Accuratezza:** L'equazione può stimare il VO2max con un errore di **±3% nel 95% dei casi**.
-
-            Ad esempio, se la tua potenza di 5 minuti è 6.8 W/kg:
-            - VO2max = 16.61 + (8.87 × 6.8) = **76.9 ml/min/kg**
-            - Intervallo di confidenza al 95%: **74.6 – 79.2 ml/min/kg**
-            """)
+                dove:
+                - **BLamaxpost** = massimo lattato ematico dopo il test
+                - **BLapre** = lattato ematico prima del test
+                - **ttest** = durata totale del test
+                - **talac** = fase alattacida
+                """
+            )
 
         with st.expander("**Come Eseguire il Test**"):
-            st.markdown("""
-            ### Test di Potenza di 5 Minuti
+            st.markdown(
+                """
+                Dopo un riscaldamento sufficiente, esegui uno **sprint massimale di 8–12 secondi** in condizioni standardizzate.
 
-            **Requisiti:**
-            - Misuratore di potenza calibrato
-            - Bicicletta stazionaria o rulli da ciclismo
-            - 72 ore di recupero da allenamenti intensi precedenti
+                Rileva il lattato prima dello sforzo e poi campiona più volte dopo il test per individuare il **valore massimo di lattato post-test**.
+                """
+            )
 
-            **Protocollo:**
-            Dopo un riscaldamento sufficiente, esegui uno **sforzo massimale di 5 minuti** e registra la **potenza media (Watt)** per l'intera durata.
+        with st.expander("**10 Raccomandazioni Pratiche**"):
+            st.markdown(
+                """
+                1. Usa un test massimale di **8–12 s**.
+                2. Mantieni il **tempo alattacido** fisso a **3 s** quando possibile.
+                3. Preferisci un **analizzatore del lattato di laboratorio**.
+                4. Punta a un **lattato pre-test ≤ 1.5 mmol/L**.
+                5. Campiona il lattato ogni minuto dopo il test per cogliere il picco.
+                6. Usa una **cadenza fissa / modalità isocinetica** su ergometro.
+                7. Usa **recupero passivo** dopo lo sprint.
+                8. Prevedi almeno una prova di **familiarizzazione**.
+                9. Richiedi uno **sforzo davvero massimale**.
+                10. Standardizza **nutrizione e idratazione** prima del test.
+                """
+            )
 
-
-            """)
-
-        with st.expander("**Riferimenti**"):
-            st.markdown("""
-            **Riferimento Principale:**
-
-            Sitko, S., Cirer-Sastre, R., Corbi, F., & López-Laval, I. (2022). 
-            Five-Minute Power-Based Test to Predict Maximal Oxygen Consumption in Road Cycling. 
-            *International Journal of Sports Physiology and Performance*, 17(1), 9–15.
-            https://doi.org/10.1123/ijspp.2020-0923
-            """)
+        with st.expander("**Riferimento**"):
+            st.markdown(
+                """
+                Langley, J., Haase, R., Nitzsche, N., & Porter, M. (2025). *Methodological Approaches in Testing Maximal Lactate Accumulation Rate - νLamax: A Systematic Review*. Journal of Science and Cycling, 14(1), 9.
+                https://doi.org/10.28985/1425.jsc.09
+                """
+            )
 
 
 # ─── Authentication Gate ───────────────────────────────────────────
@@ -144,8 +163,8 @@ if not st.session_state.authenticated:
     pw = st.text_input(
         "Enter KIW subscriber password to edit input data:" if language == "English"
         else "Inserisci la password ricevuta per utilizzare questa app:",
-        type="password", key="pw_input"
-
+        type="password",
+        key="pw_input",
     )
     if pw == SHARED_PASSWORD:
         st.session_state.authenticated = True
@@ -155,8 +174,8 @@ if not st.session_state.authenticated:
         st.error("❌ Incorrect password" if language == "English" else "❌ Password errata")
     st.stop()
 
+
 # ─── Main Layout ──────────────────────────────────────────────────
-# Header row
 hc1, hc2 = st.columns([1, 7])
 
 with hc1:
@@ -181,7 +200,7 @@ with hc1:
 with hc2:
     ca, cb = st.columns([3, 1])
     with ca:
-        title = "VO2 Max Calculator" if language == "English" else "Calcolatore VO2 max"
+        title = "vLaMax Calculator" if language == "English" else "Calcolatore vLaMax"
         st.markdown(
             f"""
             <style>
@@ -216,11 +235,9 @@ with hc2:
             st.session_state.language = lang_choice
             st.rerun()
 
+
 # ─── Page Navigation ──────────────────────────────────────────────
-page_options = [
-    page_labels[language]["Calculator"],
-    page_labels[language]["Instructions"]
-]
+page_options = [page_labels[language]["Calculator"], page_labels[language]["Instructions"]]
 current_page_display = page_labels[language][st.session_state.page_internal]
 
 if "page_radio" not in st.session_state or st.session_state.page_radio not in page_options:
@@ -240,149 +257,168 @@ if st.session_state.page_internal == "Instructions":
     instruct_pg()
     st.stop()
 
+
 # ─── Calculator Page ──────────────────────────────────────────────
 st.markdown("---")
+st.markdown("## " + ("vLaMax Calculator" if language == "English" else "Calcolatore vLaMax"))
 
-st.markdown(
-    "## " + ("5-Minute Power Output Test" if language == "English" else "Test di Potenza di 5 Minuti")
+st.caption(
+    "Estimate vLaMax from pre/post lactate values and test timing." if language == "English"
+    else "Stima la vLaMax dai valori di lattato pre/post test e dai tempi del test."
 )
 
-# Input method toggle
-input_method_label = "Input Method" if language == "English" else "Metodo di Input"
-input_method_options = (
-    ("W/kg", "Watts") if language == "English"
-    else ("W/kg", "Watt")
-)
+col1, col2, col3, col4 = st.columns(4)
 
-col_toggle_a, col_toggle_b = st.columns([1, 3])
-with col_toggle_a:
-    input_method = st.radio(
-        input_method_label,
-        input_method_options,
-        horizontal=True,
-        key="input_method_radio"
+with col1:
+    bl_pre = st.number_input(
+        "Pre-test lactate (mmol/L)" if language == "English" else "Lattato pre-test (mmol/L)",
+        min_value=0.0,
+        max_value=25.0,
+        value=float(st.session_state.get("bl_pre", 1.0)),
+        step=0.1,
+        disabled=not st.session_state.authenticated,
+    )
+    st.session_state.bl_pre = bl_pre
+
+with col2:
+    bl_post = st.number_input(
+        "Peak post-test lactate (mmol/L)" if language == "English" else "Picco lattato post-test (mmol/L)",
+        min_value=0.0,
+        max_value=30.0,
+        value=float(st.session_state.get("bl_post", 12.0)),
+        step=0.1,
+        disabled=not st.session_state.authenticated,
+    )
+    st.session_state.bl_post = bl_post
+
+with col3:
+    t_test = st.number_input(
+        "Total test duration (s)" if language == "English" else "Durata totale test (s)",
+        min_value=1.0,
+        max_value=60.0,
+        value=float(st.session_state.get("t_test", 10.0)),
+        step=0.5,
+        disabled=not st.session_state.authenticated,
+    )
+    st.session_state.t_test = t_test
+
+with col4:
+    t_alac = st.number_input(
+        "Alactic time (s)" if language == "English" else "Tempo alattacido (s)",
+        min_value=0.0,
+        max_value=10.0,
+        value=float(st.session_state.get("t_alac", 3.0)),
+        step=0.5,
+        disabled=not st.session_state.authenticated,
+    )
+    st.session_state.t_alac = t_alac
+
+calc_col, note_col = st.columns([1, 3])
+with calc_col:
+    calculate_pressed = st.button(
+        "Calculate" if language == "English" else "Calcola",
+        use_container_width=True,
+        disabled=not st.session_state.authenticated,
     )
 
-# Input fields based on selected method
-if input_method == "W/kg" or (language == "Italiano" and input_method == "W/kg"):
-    # W/kg input method
-    col1, _, col2 = st.columns([1.5,1.5, 1])
-
-    with col1:
-        power_input = st.number_input(
-            "5-Minute Average Power (W/kg)" if language == "English" else "Potenza Media 5 Minuti (W/kg)",
-            min_value=0.1,
-            max_value=15.0,
-            value=st.session_state.get("power_input_wkg", 5.0),
-            step=0.1,
+if calculate_pressed:
+    if t_test <= t_alac:
+        st.session_state.calculated_vlamax = None
+        st.error(
+            "Total test duration must be greater than alactic time." if language == "English"
+            else "La durata totale del test deve essere maggiore del tempo alattacido."
         )
-        st.session_state["power_input_wkg"] = power_input
-        calculated_wkg = power_input
-
-    with col1:
-        if st.button(
-                "Calculate" if language == "English" else "Calcola",
-                use_container_width=True,
-        ):
-            vo2max = 16.61 + 8.87 * calculated_wkg
-            ci_lower = vo2max * 0.97
-            ci_upper = vo2max * 1.03
-
-            st.session_state.calculated_vo2max = {
-                "vo2max": vo2max,
-                "ci_lower": ci_lower,
-                "ci_upper": ci_upper,
-            }
-
-else:  # Watts + Weight input method
-    col1, col2, col3 = st.columns([1.5, 1.5, 1])
-
-    with col1:
-        watts = st.number_input(
-            "5-Minute Average Power (Watts)" if language == "English" else "Potenza Media 5 Minuti (Watt)",
-            min_value=10,
-            max_value=2000,
-            value=st.session_state.get("power_input_watts", 400),
-            step=10,
+    elif bl_post < bl_pre:
+        st.session_state.calculated_vlamax = None
+        st.error(
+            "Post-test lactate should be greater than or equal to pre-test lactate." if language == "English"
+            else "Il lattato post-test deve essere maggiore o uguale al lattato pre-test."
         )
-        st.session_state["power_input_watts"] = watts
+    else:
+        vlamax = (bl_post - bl_pre) / (t_test - t_alac)
+        st.session_state.calculated_vlamax = {
+            "vlamax": vlamax,
+            "bl_pre": bl_pre,
+            "bl_post": bl_post,
+            "t_test": t_test,
+            "t_alac": t_alac,
+        }
 
-    with col2:
-        weight = st.number_input(
-            "Body Weight (kg)" if language == "English" else "Peso Corporeo (kg)",
-            min_value=30.0,
-            max_value=150.0,
-            value=st.session_state.get("body_weight", 70.0),
-            step=0.1,
-        )
-        st.session_state["body_weight"] = weight
-
-    with col1:
-        if st.button(
-                "Calculate" if language == "English" else "Calcola",
-                use_container_width=True,
-        ):
-            calculated_wkg = watts / weight
-            vo2max = 16.61 + 8.87 * calculated_wkg
-            ci_lower = vo2max * 0.97
-            ci_upper = vo2max * 1.03
-
-            st.session_state.calculated_vo2max = {
-                "vo2max": vo2max,
-                "ci_lower": ci_lower,
-                "ci_upper": ci_upper,
-                "watts": watts,
-                "weight": weight,
-                "wkg": calculated_wkg,
-            }
 
 # ─── Results Display ──────────────────────────────────────────────
-if st.session_state.calculated_vo2max:
-    results = st.session_state.calculated_vo2max
-    vo2max = results["vo2max"]
-    ci_lower = results["ci_lower"]
-    ci_upper = results["ci_upper"]
+if st.session_state.calculated_vlamax:
+    result = st.session_state.calculated_vlamax
+    vlamax = result["vlamax"]
 
     st.markdown("---")
-    st.markdown(
-        "## " + ("Results" if language == "English" else "Risultati")
-    )
+    st.markdown("## " + ("Result" if language == "English" else "Risultato"))
 
-    # Main metrics with enhanced styling
-    m2, m1,m3 = st.columns([1, 1.2, 1])
+    # st.markdown(
+    #     f"""
+    #     <div style="
+    #         background: #f8fafc;
+    #         border: 1px solid rgba(15, 23, 42, 0.10);
+    #         border-radius: 16px;
+    #         padding: 18px 20px;
+    #         margin-bottom: 14px;
+    #     ">
+    #         <div style="color: #64748b; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">
+    #             {'Formula' if language == 'English' else 'Formula'}
+    #         </div>
+    #         <div style="margin-top: 8px; font-size: 1.05rem; color: #0f172a;">
+    #             ( {result['bl_post']:.1f} - {result['bl_pre']:.1f} ) / ( {result['t_test']:.1f} - {result['t_alac']:.1f} )
+    #         </div>
+    #     </div>
+    #     """,
+    #     unsafe_allow_html=True,
+    # )
 
-
-    def metric_card(container, label, value):
-        """Clean, professional metric card"""
-        container.markdown(
+    c1, c2 = st.columns([1.3, 2])
+    with c1:
+        st.markdown(
             f"""
             <div style="
-                background: #f8f9fa;
-                border-left: 4px solid #2c3e50;
-                padding: 24px 16px;
-                border-radius: 6px;
-                text-align: center;
+                background: #ffffff;
+                border: 1px solid rgba(15, 23, 42, 0.10);
+                border-radius: 18px;
+                padding: 18px 20px;
+                box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
             ">
-                <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
-                    {label}
-                </p>
-                <p style="margin: 12px 0 0 0; font-size: 44px; font-weight: 600; color: #1a1a1a; line-height: 1;">
-                    {value:.1f}
-                </p>
+                <div style="color:#64748b;font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">
+                    {'vLaMax' if language == 'English' else 'vLaMax'}
+                </div>
+                <div style="margin-top:10px;font-size:2.3rem;font-weight:700;color:#0f172a;line-height:1;">
+                    {format_vlamax(vlamax)}
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
+    # with c2:
+    #     st.markdown(
+    #         f"""
+    #         <div style="
+    #             background: #ffffff;
+    #             border: 1px solid rgba(15, 23, 42, 0.10);
+    #             border-radius: 18px;
+    #             padding: 18px 20px;
+    #             box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    #         ">
+    #             <div style="color:#64748b;font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">
+    #                 {'Inputs used' if language == 'English' else 'Valori usati'}
+    #             </div>
+    #             <div style="margin-top:10px;color:#0f172a;font-size:0.98rem;line-height:1.8;">
+    #                 BLapre = {result['bl_pre']:.1f} mmol/L<br>
+    #                 BLamaxpost = {result['bl_post']:.1f} mmol/L<br>
+    #                 ttest = {result['t_test']:.1f} s<br>
+    #                 talac = {result['t_alac']:.1f} s
+    #             </div>
+    #         </div>
+    #         """,
+    #         unsafe_allow_html=True,
+    #     )
 
-    metrics = [
-        ("VO2max (ml/min/kg)" if language == "English" else "VO2max (ml/min/kg)", vo2max),
-        ("Lower 95% CI" if language == "English" else "IC Inferiore 95%", ci_lower),
-        ("Upper 95% CI" if language == "English" else "IC Superiore 95%", ci_upper)
-    ]
-
-    for (container, label, value) in zip([m1, m2, m3], [m[0] for m in metrics], [m[1] for m in metrics]):
-        metric_card(container, label, value)
 
 # ─── Footer ───────────────────────────────────────────────────────
 st.markdown("---")
@@ -399,7 +435,7 @@ with fc1:
         © {year} <b>Knowledge is Watt</b><br>
         {"All rights reserved." if language == "English" else "Tutti i diritti riservati."}
         </div>""",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
 with fc3:
@@ -411,5 +447,5 @@ with fc3:
         {"Questions/Issues?" if language == "English" else "Domande?"}
         <a href="mailto:contact@knowledgeiswatt.com">✉️</a>
         </div>""",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
