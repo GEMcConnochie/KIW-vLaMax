@@ -20,11 +20,13 @@ st.set_page_config(
 
 # ─── Auth / Secrets ────────────────────────────────────────────────
 try:
-    SHARED_PASSWORD = st.secrets["SHARED_PASSWORD"]
+    SHARED_PASSWORD = os.getenv("SHARED_PASSWORD", "")
+    running_locally = False
 except Exception:
+    running_locally = True
+
     try:
         from dotenv import load_dotenv
-
         load_dotenv()
     except ImportError:
         pass
