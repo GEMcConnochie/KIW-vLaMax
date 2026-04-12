@@ -505,7 +505,7 @@ if not st.session_state.authenticated:
         st.rerun()
     elif pw:
         st.error("❌ Incorrect password" if language == "English" else "❌ Password errata")
-    st.stop()
+
 
 
 # ─── Main Layout ──────────────────────────────────────────────────
