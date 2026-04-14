@@ -415,20 +415,13 @@ def instruct_pg():
                 """
             )
 
-        with st.expander("**10 Practical Recommendations**"):
+        with st.expander("**The 10 Pillars of a Reliable vLaMax Test'**"):
             st.markdown(
                 """
-                1. Use an **8–12 s** all-out test.
-                2. Keep the **alactic time** fixed at **3 s** when possible.
-                3. Ideally, use a **laboratory-grade lactate analyser**.
-                4. Aim for **pre-test lactate ≤ 1.5 mmol/L**.
-                5. Sample lactate every minute after the test to capture the peak.
-                6. Use a **fixed cadence / isokinetic mode** when testing on an ergometer.
-                7. Use **passive recovery** after the sprint.
-                8. Include at least one **familiarization** trial.
-                9. Ensure a **true maximal effort** with strong motivation.
-                10. Consume suitable **nutrition and hydration** before testing.
-                """
+            To learn how to perform a reliable vLaMax Test, read this KIW Research Note:
+
+            [The 10 Pillars of a Reliable vLaMax Test](https://knowledgeiswatt.substack.com/p/129-the-10-pillars-of-a-reliable?r=1w265j)
+            """
             )
 
         with st.expander("**Reference**"):
@@ -466,19 +459,12 @@ def instruct_pg():
                 """
             )
 
-        with st.expander("**10 Raccomandazioni Pratiche**"):
+        with st.expander("**I 10 pilastri di un test vLaMax affidabile**"):
             st.markdown(
                 """
-                1. Usa un test massimale di **8–12 s**.
-                2. Mantieni il **tempo alattacido** fisso a **3 s** quando possibile.
-                3. Preferisci un **analizzatore del lattato di laboratorio**.
-                4. Punta a un **lattato pre-test ≤ 1.5 mmol/L**.
-                5. Campiona il lattato ogni minuto dopo il test per cogliere il picco.
-                6. Usa una **cadenza fissa / modalità isocinetica** su ergometro.
-                7. Usa **recupero passivo** dopo lo sprint.
-                8. Prevedi almeno una prova di **familiarizzazione**.
-                9. Richiedi uno **sforzo davvero massimale**.
-                10. Prima del test, assicurarsi di assumere un'alimentazione e un'idratazione adeguate.
+Per imparare a eseguire un test vLaMax affidabile, leggi questa nota di ricerca del KIW:
+
+[I 10 pilastri di un test vLaMax affidabile](https://knowledgeiswatt.substack.com/p/129-the-10-pillars-of-a-reliable?r=1w265j)
                 """
             )
 
@@ -746,7 +732,7 @@ if rider.get("result"):
         )
     with rc3:
         st.metric(
-            "Peak time" if language == "English" else "Tempo di picco",
+            "Peak lactate time" if language == "English" else "Tempo di picco del lattato",
             f"{int(result.get('peak_time_s', result.get('peak_minute', 0) * 60))} s",
         )
 
